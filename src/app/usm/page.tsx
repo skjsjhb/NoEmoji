@@ -1,15 +1,16 @@
 import { Card, Flex, Heading, Table } from "@radix-ui/themes";
 import { cookies } from "next/headers";
-import { getAllUsers } from "@/app/actions/account";
+import { getAllUsers, getUserInfo } from "@/app/actions/account";
 import { notFound } from "next/navigation";
 
 export default async function UsmPage() {
     const cookieStore = await cookies();
-    const uid = cookieStore.get("uid");
-    const isSuper = false; // TODO: Check for super user
+    const uid = cookieStore.get("uid")?.value;
+    const userInfo = await getUserInfo();
 
-    if (!isSuper) return notFound();
+    if (!uid) return notFound();
 
+    if (!userInfo.super) return notFound();
 
     const users = await getAllUsers();
 

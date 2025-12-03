@@ -2,28 +2,64 @@ import ClientEmojiPanel from "@/app/client-emoji-panel";
 import { cookies } from "next/headers";
 import { Card, Flex, Heading, Text } from "@radix-ui/themes";
 import { EMOJIS } from "@/app/emojis";
-import { redirect } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
+import { getUserInfo } from "./actions/account";
+import { wsRequest } from "./actions/emoji";
 
 export default async function Home() {
     const cookieStore = await cookies();
-    const uid = cookieStore.get("uid");
+    const uid = cookieStore.get("uid")?.value;
+    const token = cookieStore.get("token")?.value;
     if (!uid) return redirect("/login");
+
+    const userInfo = await getUserInfo();
+    const isSuper = userInfo.super; // DONE
+
+    const tokenValid = await wsRequest({
+            op: "user.validate",
+            uid: uid,
+            token: token
+        });
+
+    if (!tokenValid) {
+            throw new Error("Token无效或已过期");
+        }
 
     // TODO: Fetches emoji history for the user
     async function getEmojiHistory(): Promise<{ id: number, date: Date }[]> {
-        const cookieStore = await cookies();
-        const uid = cookieStore.get("uid");
-        const token = cookieStore.get("token");
-        // ...
-        return [];
+        const emojiResponse = await wsRequest<
+            { emoji: number; time: number }[]
+        >({
+            op: "emoji.query",
+            uid: uid
+        });
+
+        return (emojiResponse ?? []).map((e) => ({
+            id: e.emoji,
+            date: new Date(e.time),
+        })).sort((a, b) => b.date.getTime() - a.date.getTime());
     }
 
     // TODO: Fetches all emoji records (only for super user)
-    async function getGlobalEmojiHistory(): Promise<{ id: number, date: Date }[]> {
-        return [];
-    }
+    async function getGlobalEmojiHistory(): Promise<{ id: number, date: Date , uid: string}[]> {
+        if (!isSuper) return [];
 
-    const isSuper = true; // TODO: Check whether the user is super
+        const emojiResponse = await wsRequest<
+            { emoji: number; time: number; uid: string}[]
+        >({
+            op: "emoji.query"
+        });
+
+        if (!emojiResponse) {
+            return [];
+        }
+
+        return (emojiResponse ?? []).map((e) => ({
+            id: e.emoji,
+            date: new Date(e.time),
+            uid: e.uid,
+        })).sort((a, b) => b.date.getTime() - a.date.getTime());
+    }
 
     const emojiHistory = await getEmojiHistory();
     const emojiCount = new Map<number, number>();
