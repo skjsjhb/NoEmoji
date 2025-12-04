@@ -5,6 +5,7 @@ import { useState } from "react";
 import { raiseError } from "@/app/toast";
 import { register } from "@/app/actions/account";
 import { toast } from "sonner";
+import { useRouter } from "next/navigation";
 
 export default function RegisterPage() {
     const [username, setUsername] = useState("");
@@ -12,16 +13,18 @@ export default function RegisterPage() {
     const [email, setEmail] = useState("");
     const [tel, setTel] = useState("");
     const [displayName, setDisplayName] = useState("");
+    const router = useRouter();
 
     async function onSubmit() {
         try {
             await register({
+                uid: username,
                 email: email,
                 tel: tel,
                 name: displayName
-            }, username, pwd);
+            }, pwd);
             toast.success("注册成功");
-            location.reload();
+            router.push("/login");
         } catch (e) {
             raiseError(e);
         }

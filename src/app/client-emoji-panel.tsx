@@ -16,6 +16,7 @@ export default function ClientEmojiPanel() {
         try {
             await submitEmoji(id);
             toast.success("已提交表情");
+            location.reload();
         } catch (e) {
             raiseError(e);
         } finally {
